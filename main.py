@@ -1,44 +1,36 @@
 from linkedin_scraper import scrape_latest_post
-from huggingface_utils import score_relevance
-from twilio_alert import send_whatsapp_via_twilio
+from twilio.rest import Client
+import os
 
-# ✅ Step 1: Define the profile to scan
-profile_url = "https://www.linkedin.com/search/results/content/?keywords=Head%20of%20Learning%20and%20Development%20and%20training&origin=SWITCH_SEARCH_VERTICAL&sid=r(T"  # Replace with any LinkedIn profile
+# Get environment variables
+twilio_sid = os.environ.get("TWILIO_SID")
+twilio_auth = os.environ.get("TWILIO_AUTH")
+twilio_from = os.environ.get("TWILIO_WHATSAPP_FROM")
+twilio_to = os.environ.get("TWILIO_WHATSAPP_TO")
 
-# ✅ Step 2: Scrape latest post
-post = scrape_latest_post(profile_url)
+# Create Twilio client
+client = Client(twilio_sid, twilio_auth)
 
-if post:
-    print("\n🔎 Scraped Post Content:")
-    print(post)
+# PROFILE_URL can be changed back later after testing
+profile_url = "https://www.linkedin.com/in/INSERT-ACTUAL-PROFILE-HERE"
 
-    # ✅ Step 3: Score relevance using Hugging Face
-    relevance = score_relevance(post)
+# TEMPORARY OVERRIDE: Replace scrape with a test message
+post = "✅ This is a test message from the GitHub Action LinkedIn Bot."
 
-    # ✅ Step 4: Decide on suggested action
-    if relevance >= 4:
-        action = "High-priority outreach"
-    elif relevance >= 2:
-        action = "Observe or follow up later"
-    else:
-        action = "Not relevant — skip"
+# Print values to debug in GitHub Actions log
+print("Twilio From:", twilio_from)
+print("Twilio To:", twilio_to)
+print("Message Body:", post)
 
-    print(f"\n📊 Relevance score (1–5): {relevance}")
-    print(f"\n📩 Suggested Action: {action}")
+# Send the WhatsApp message
+try:
+    message = client.messages.create(
+        body=post,
+        from_=twilio_from,
+        to=twilio_to
+    )
+    print("Twilio SID:", message.sid)
+    print("Message Status:", message.status)
+except Exception as e:
+    print("Error sending WhatsApp message:", str(e))
 
-    # ✅ Step 5: Compile summary for alert
-    summary = f"""
-🔎 Lead Profile:
-{profile_url}
-
-📝 Post: {post[:300]}...
-
-📊 Relevance Score: {relevance}
-
-📩 Action: {action}
-"""
-    # ✅ Step 6: Send via Twilio WhatsApp Sandbox
-    send_whatsapp_via_twilio(summary)
-
-else:
-    print("❌ Could not find a recent post for this profile.")
