@@ -3,7 +3,7 @@ from huggingface_utils import score_relevance
 from twilio_alert import send_whatsapp_via_twilio
 
 # ✅ Step 1: Define the profile to scan
-profile_url = "https://www.linkedin.com/in/lilittshughuryan/"  # Replace with any LinkedIn profile
+profile_url = "https://www.linkedin.com/search/results/content/?keywords=Head%20of%20Learning%20and%20Development%20and%20training&origin=SWITCH_SEARCH_VERTICAL&sid=r(T"  # Replace with any LinkedIn profile
 
 # ✅ Step 2: Scrape latest post
 post = scrape_latest_post(profile_url)
