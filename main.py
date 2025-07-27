@@ -1,36 +1,53 @@
-from linkedin_scraper import scrape_latest_post
-from twilio.rest import Client
-import os
+import json
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from linkedin_scraper import scrape_relevant_posts
 
-# Get environment variables
-twilio_sid = os.environ.get("TWILIO_SID")
-twilio_auth = os.environ.get("TWILIO_AUTH")
-twilio_from = os.environ.get("TWILIO_WHATSAPP_FROM")
-twilio_to = os.environ.get("TWILIO_WHATSAPP_TO")
+# CONFIGURATION
+search_url = "https://www.linkedin.com/search/results/content/?keywords=graduate%20program%20Saudi"
+COOKIE_FILE = "linkedin_cookies.json"
+RELEVANCE_THRESHOLD = 3.0
+DEBUG = True
 
-# Create Twilio client
-client = Client(twilio_sid, twilio_auth)
+def load_valid_cookies(driver, cookie_path, domain_filter="www.linkedin.com"):
+    with open(cookie_path, "r", encoding="utf-8") as f:
+        cookie_data = json.load(f)
 
-# PROFILE_URL can be changed back later after testing
-profile_url = "https://www.linkedin.com/in/INSERT-ACTUAL-PROFILE-HERE"
+    driver.get("https://www.linkedin.com")
+    added = 0
+    for cookie in cookie_data.get("cookies", []):
+        if cookie.get("domain") and domain_filter not in cookie["domain"]:
+            continue
+        cookie.pop("expiry", None)
+        try:
+            driver.add_cookie(cookie)
+            added += 1
+        except Exception as e:
+            print(f"⚠️ Skipped invalid cookie: {cookie.get('name')} → {str(e)}")
+    print(f"✅ Loaded {added} cookies into browser.")
 
-# TEMPORARY OVERRIDE: Replace scrape with a test message
-post = "✅ This is a test message from the GitHub Action LinkedIn Bot."
+def main():
+    try:
+        chrome_options = Options()
+        chrome_options.add_argument("--start-maximized")
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        # chrome_options.add_argument("--headless")  # Optional
 
-# Print values to debug in GitHub Actions log
-print("Twilio From:", twilio_from)
-print("Twilio To:", twilio_to)
-print("Message Body:", post)
+        driver = webdriver.Chrome(options=chrome_options)
 
-# Send the WhatsApp message
-try:
-    message = client.messages.create(
-        body=post,
-        from_=twilio_from,
-        to=twilio_to
-    )
-    print("Twilio SID:", message.sid)
-    print("Message Status:", message.status)
-except Exception as e:
-    print("Error sending WhatsApp message:", str(e))
+        # Load LinkedIn cookies securely
+        load_valid_cookies(driver, COOKIE_FILE)
 
+        # Call scraper with correct arguments
+        posts = scrape_relevant_posts(driver, search_url, debug=DEBUG, min_score=RELEVANCE_THRESHOLD)
+
+        if not posts:
+            print("❌ No relevant posts found.")
+
+        driver.quit()
+
+    except Exception as e:
+        print("❌ Unexpected error:", str(e))
+
+if __name__ == "__main__":
+    main()
