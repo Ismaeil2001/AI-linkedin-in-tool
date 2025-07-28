@@ -3,7 +3,7 @@ name: Daily LinkedIn Scraper
 on:
   schedule:
     - cron: '0 8 * * *'  # Runs every day at 8 AM UTC
-  workflow_dispatch:       # Also allows manual triggering from GitHub
+  workflow_dispatch:       # Allows manual triggering
 
 jobs:
   run-daily-script:
@@ -26,10 +26,15 @@ jobs:
       - name: Install Playwright Browsers
         run: playwright install
 
-      # ✅ New Step: Decode Google credentials
+      # ✅ Decode Google Sheets credentials
       - name: Decode Google credentials
         run: |
           echo "${{ secrets.GCP_CREDENTIALS }}" | base64 --decode > credentials.json
+
+      # ✅ Decode LinkedIn cookies
+      - name: Decode LinkedIn cookies
+        run: |
+          echo "${{ secrets.LINKEDIN_COOKIES_B64 }}" | base64 --decode > linkedin_cookies.json
 
       - name: Run script
         env:
